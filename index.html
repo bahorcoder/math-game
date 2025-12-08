@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>VibeX</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        :root{--bg:#0a0a0f;--bg2:#14141f;--card:#1c1c2a;--accent:#6366f1;--text:#fff;--text2:#888;--green:#22c55e;--red:#ef4444;--orange:#f59e0b}
+        body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+        .app{max-width:400px;margin:0 auto;padding:16px 16px 100px}
+        .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+        .logo{font-size:24px;font-weight:800;background:linear-gradient(135deg,#6366f1,#a855f7);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+        .stats{display:flex;gap:12px}
+        .stat{background:var(--card);padding:8px 14px;border-radius:20px;font-size:14px;font-weight:600}
+        .rank-box{background:var(--card);border-radius:16px;padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:14px}
+        .rank-icon{font-size:40px}
+        .rank-info{flex:1}
+        .rank-name{font-weight:700;font-size:18px}
+        .rank-pts{font-size:13px;color:var(--text2)}
+        .prog-bar{height:6px;background:var(--bg);border-radius:3px;margin-top:8px;overflow:hidden}
+        .prog-fill{height:100%;background:linear-gradient(90deg,#6366f1,#a855f7);border-radius:3px}
+        .daily-box{background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(168,85,247,.1));border:1px solid rgba(99,102,241,.3);border-radius:16px;padding:16px;margin-bottom:16px}
+        .daily-title{font-weight:700;font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+        .daily-tasks{display:flex;flex-direction:column;gap:8px}
+        .daily-task{display:flex;justify-content:space-between;align-items:center;background:var(--bg);padding:10px 12px;border-radius:10px;font-size:13px}
+        .daily-task.done{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3)}
+        .daily-task.done .dtcheck{color:var(--green)}
+        .daily-progress{font-size:12px;color:var(--text2)}
+        .dtcheck{margin-left:8px}
+        .daily-claim{background:linear-gradient(135deg,#6366f1,#a855f7);border:none;padding:12px;border-radius:12px;color:#fff;font-weight:700;font-size:14px;width:100%;margin-top:12px;cursor:pointer}
+        .daily-claim:disabled{opacity:.5;cursor:not-allowed}
+        .game-box{background:var(--card);border-radius:20px;padding:24px;margin-bottom:16px}
+        .lives{display:flex;justify-content:center;gap:8px;margin-bottom:16px;font-size:24px}
+        .heart.empty{opacity:.2}
+        .streak-box{text-align:center;margin-bottom:12px;font-size:18px;font-weight:700;color:#ff6b6b}
+        .streak-bonus{font-size:14px;color:var(--green)}
+        .diff{text-align:center;margin-bottom:8px}
+        .diff span{background:rgba(99,102,241,.2);color:#818cf8;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600}
+        .diff.medium span{background:rgba(245,158,11,.2);color:var(--orange)}
+        .diff.hard span{background:rgba(239,68,68,.2);color:var(--red)}
+        .diff.extreme span{background:rgba(168,85,247,.2);color:#a855f7}
+        .question{text-align:center;font-size:32px;font-weight:800;margin:20px 0;font-family:monospace;letter-spacing:2px}
+        .timer{margin-bottom:20px}
+        .timer-bar{height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+        .timer-fill{height:100%;background:linear-gradient(90deg,#6366f1,#a855f7);transition:width .1s}
+        .timer-fill.warn{background:var(--orange)}
+        .timer-fill.danger{background:var(--red)}
+        .timer-txt{text-align:center;font-size:14px;color:var(--text2);margin-top:6px;font-family:monospace}
+        .options{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .opt{background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:16px;padding:20px;font-size:24px;font-weight:800;color:#fff;cursor:pointer;font-family:monospace;transition:transform .15s}
+        .opt:active{transform:scale(.95)}
+        .opt.correct{background:linear-gradient(135deg,#22c55e,#16a34a)!important}
+        .opt.wrong{background:linear-gradient(135deg,#ef4444,#b91c1c)!important;animation:shake .3s}
+        @keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+        .score-row{display:flex;justify-content:center;gap:30px;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1)}
+        .score-item{text-align:center}
+        .score-val{font-size:28px;font-weight:800}
+        .score-lbl{font-size:11px;color:var(--text2);text-transform:uppercase}
+        .start-btn{width:100%;padding:18px;background:linear-gradient(135deg,#6366f1,#a855f7);border:none;border-radius:16px;color:#fff;font-size:18px;font-weight:700;cursor:pointer}
+        .start-btn:active{transform:scale(.98)}
+        .pts-popup{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);font-size:48px;font-weight:800;color:var(--green);opacity:0;pointer-events:none;z-index:999}
+        .pts-popup.show{animation:ptsAnim .8s ease-out}
+        @keyframes ptsAnim{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}20%{opacity:1;transform:translate(-50%,-70%) scale(1.2)}100%{opacity:0;transform:translate(-50%,-120%)}}
+        .final{text-align:center;padding:20px 0}
+        .final h2{font-size:28px;margin-bottom:8px}
+        .final-score{font-size:56px;font-weight:800;background:linear-gradient(135deg,#6366f1,#a855f7);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin:16px 0}
+        .final-stats{display:flex;gap:10px;margin-bottom:20px}
+        .final-stat{flex:1;background:var(--bg);padding:14px;border-radius:12px;text-align:center}
+        .shop-section{margin-bottom:24px}
+        .shop-title{font-size:14px;color:var(--text2);margin-bottom:12px;font-weight:600}
+        .shop-item{background:var(--card);border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;margin-bottom:10px;cursor:pointer}
+        .shop-item:active{transform:scale(.98)}
+        .shop-item.premium{background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(251,191,36,.1));border:2px solid rgba(245,158,11,.3)}
+        .shop-item.disabled{opacity:.4;pointer-events:none}
+        .shop-icon{width:50px;height:50px;background:var(--bg);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px}
+        .shop-item.premium .shop-icon{background:linear-gradient(135deg,#f59e0b,#fbbf24)}
+        .shop-info{flex:1}
+        .shop-name{font-weight:600;font-size:16px}
+        .shop-desc{font-size:12px;color:var(--text2)}
+        .shop-price{background:var(--bg);padding:8px 14px;border-radius:12px;font-weight:700;font-size:13px}
+        .shop-item.premium .shop-price{background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#000}
+        .rank-card{background:var(--card);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer}
+        .rank-card.current{border:2px solid #6366f1;background:rgba(99,102,241,.1)}
+        .rank-card.owned{border:2px solid var(--green)}
+        .rank-card-icon{font-size:32px}
+        .rank-card-info{flex:1}
+        .rank-card-name{font-weight:600}
+        .rank-card-range{font-size:12px;color:var(--text2)}
+        .rank-card-price{font-size:13px;font-weight:600}
+        .settings-group{background:var(--card);border-radius:16px;overflow:hidden;margin-bottom:16px}
+        .settings-item{display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid rgba(255,255,255,.05)}
+        .settings-item:last-child{border-bottom:none}
+        .toggle{width:50px;height:28px;background:var(--bg);border-radius:14px;position:relative;cursor:pointer}
+        .toggle.on{background:#6366f1}
+        .toggle::after{content:'';position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s}
+        .toggle.on::after{transform:translateX(22px)}
+        .nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-around;padding:12px 0;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+        .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text2);font-size:12px;cursor:pointer;padding:4px 20px}
+        .nav-item.active{color:#6366f1}
+        .nav-item span:first-child{font-size:24px}
+        .page{display:none}
+        .page.active{display:block}
+        .ref-stats{background:var(--bg);border-radius:12px;padding:12px;margin-top:12px}
+        .ref-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px}
+        .ref-row:not(:last-child){border-bottom:1px solid rgba(255,255,255,.05)}
+    </style>
+</head>
+<body>
+<div class="pts-popup" id="popup">+10</div>
+<div class="app">
+    <header class="header">
+        <div class="logo">VibeX</div>
+        <div class="stats">
+            <div class="stat">🔥 <span id="hStreak">0</span></div>
+            <div class="stat">⭐ <span id="hPts">0</span></div>
+        </div>
+    </header>
+
+    <div id="gamePage" class="page active">
+        <div class="rank-box">
+            <div class="rank-icon" id="rIcon">🥉</div>
+            <div class="rank-info">
+                <div class="rank-name" id="rName">Bronze</div>
+                <div class="rank-pts" id="rPts">0 / 15,000</div>
+                <div class="prog-bar"><div class="prog-fill" id="rFill" style="width:0%"></div></div>
+            </div>
+        </div>
+
+        <div class="daily-box" id="dailyBox">
+            <div class="daily-title">🎁 Kunlik vazifalar <span style="margin-left:auto;font-size:13px;color:var(--green)">+500 ⭐</span></div>
+            <div class="daily-tasks">
+                <div class="daily-task" id="task1"><span>🎮 10 ta o'yin o'ynash</span><span><span class="daily-progress" id="task1p">0/10</span><span class="dtcheck" id="task1c"></span></span></div>
+                <div class="daily-task" id="task2"><span>👥 3 ta do'st taklif</span><span><span class="daily-progress" id="task2p">0/3</span><span class="dtcheck" id="task2c"></span></span></div>
+                <div class="daily-task" id="task3"><span>🛒 Do'kondan xarid</span><span><span class="daily-progress" id="task3p">0/1</span><span class="dtcheck" id="task3c"></span></span></div>
+            </div>
+            <button class="daily-claim" id="dailyClaim" onclick="claimDaily()" disabled>Vazifalarni bajaring</button>
+        </div>
+
+        <div class="game-box">
+            <div id="preGame">
+                <div style="text-align:center;padding:30px 0">
+                    <div style="font-size:64px;margin-bottom:16px">🧮</div>
+                    <h2 style="margin-bottom:8px">Math Challenge</h2>
+                    <p style="color:var(--text2);margin-bottom:24px">Tez hisoblang!</p>
+                    <button class="start-btn" onclick="startGame()">▶️ Boshlash</button>
+                </div>
+            </div>
+            <div id="inGame" style="display:none">
+                <div class="lives" id="lives"></div>
+                <div class="streak-box">🔥 <span id="gStreak">0</span> <span class="streak-bonus" id="gBonus"></span></div>
+                <div class="diff" id="diffBox"><span>OSON</span></div>
+                <div class="question" id="quest">12 + 8</div>
+                <div class="timer"><div class="timer-bar"><div class="timer-fill" id="tFill"></div></div><div class="timer-txt" id="tTxt">1:00</div></div>
+                <div class="options" id="opts"></div>
+                <div class="score-row">
+                    <div class="score-item"><div class="score-val" id="gScore">0</div><div class="score-lbl">Ball</div></div>
+                    <div class="score-item"><div class="score-val" id="gCorrect">0</div><div class="score-lbl">To'g'ri</div></div>
+                </div>
+            </div>
+            <div id="endGame" style="display:none">
+                <div class="final">
+                    <h2>🎮 O'yin tugadi!</h2>
+                    <div class="final-score" id="fScore">+0</div>
+                    <div class="final-stats">
+                        <div class="final-stat"><div style="font-size:20px;font-weight:700" id="fCorrect">0</div><div style="font-size:11px;color:var(--text2)">To'g'ri</div></div>
+                        <div class="final-stat"><div style="font-size:20px;font-weight:700" id="fStreak">0</div><div style="font-size:11px;color:var(--text2)">Streak</div></div>
+                        <div class="final-stat"><div style="font-size:20px;font-weight:700" id="fTotal">0</div><div style="font-size:11px;color:var(--text2)">Jami</div></div>
+                    </div>
+                    <button class="start-btn" onclick="startGame()">🔄 Qayta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="shopPage" class="page">
+        <h2 style="margin-bottom:20px">🛒 Do'kon</h2>
+        <div class="shop-section">
+            <div class="shop-title">PREMIUM</div>
+            <div class="shop-item premium" id="shopPrem" onclick="buyPremium()">
+                <div class="shop-icon">👑</div>
+                <div class="shop-info"><div class="shop-name">Premium</div><div class="shop-desc">2x ball, 5 jon, +10sek</div></div>
+                <div class="shop-price">7,000 so'm</div>
+            </div>
+        </div>
+        <div class="shop-section">
+            <div class="shop-title">POWERUPS</div>
+            <div class="shop-item" id="shopLife" onclick="buyLife()">
+                <div class="shop-icon">❤️</div>
+                <div class="shop-info"><div class="shop-name">+1 Jon</div><div class="shop-desc" id="lifeLeft">Qoldi: 3</div></div>
+                <div class="shop-price">100 ⭐</div>
+            </div>
+            <div class="shop-item" id="shopTime" onclick="buyTime()">
+                <div class="shop-icon">⏱️</div>
+                <div class="shop-info"><div class="shop-name">+2 Sekund</div><div class="shop-desc" id="timeLeft">Qoldi: 10</div></div>
+                <div class="shop-price">100 ⭐</div>
+            </div>
+        </div>
+        <div class="shop-section">
+            <div class="shop-title">DARAJALAR</div>
+            <div id="ranksBox"></div>
+        </div>
+    </div>
+
+    <div id="settingsPage" class="page">
+        <h2 style="margin-bottom:20px">⚙️ Sozlamalar</h2>
+        <div class="settings-group">
+            <div class="settings-item"><span>🔊 Ovoz</span><div class="toggle" id="togSound" onclick="togSound()"></div></div>
+            <div class="settings-item"><span>📳 Vibratsiya</span><div class="toggle on" id="togVib" onclick="togVib()"></div></div>
+            <div class="settings-item"><span>🌙 Qorong'u</span><div class="toggle on" id="togDark" onclick="togDark()"></div></div>
+        </div>
+        <div class="settings-group">
+            <div class="settings-item"><span>🎯 Kunlik streak</span><span id="sStreak">0 kun</span></div>
+            <div class="settings-item"><span>🎮 O'yinlar</span><span id="sGames">0</span></div>
+            <div class="settings-item"><span>🏆 Rekord</span><span id="sBest">0</span></div>
+        </div>
+        <div class="settings-group">
+            <div class="settings-item" style="flex-direction:column;align-items:stretch">
+                <div style="margin-bottom:8px"><span>👥 Referral</span></div>
+                <div class="ref-stats">
+                    <div class="ref-row"><span>Taklif qilganlar</span><span id="refCnt">0</span></div>
+                    <div class="ref-row"><span>Referral ball</span><span id="refPts">0</span></div>
+                    <div class="ref-row"><span>1% bonus</span><span id="refBonus">0</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="settings-group">
+            <div class="settings-item" onclick="resetAll()" style="cursor:pointer"><span style="color:var(--red)">🗑️ Tozalash</span><span>→</span></div>
+        </div>
+    </div>
+</div>
+
+<nav class="nav">
+    <div class="nav-item active" onclick="showPage('game')"><span>🎮</span><span>O'yin</span></div>
+    <div class="nav-item" onclick="showPage('shop')"><span>🛒</span><span>Do'kon</span></div>
+    <div class="nav-item" onclick="showPage('settings')"><span>⚙️</span><span>Sozlama</span></div>
+</nav>
+
+<script>
+const tg=window.Telegram?.WebApp;if(tg){tg.expand();tg.ready()}
+
+const RANKS=[
+    {id:'bronze',name:'Bronze',icon:'🥉',min:0,max:15000,price:0},
+    {id:'silver',name:'Silver',icon:'🥈',min:15000,max:30000,price:2000},
+    {id:'gold',name:'Gold',icon:'🥇',min:30000,max:50000,price:5000},
+    {id:'platinum',name:'Platinum',icon:'💎',min:50000,max:100000,price:10000},
+    {id:'diamond',name:'Diamond',icon:'👑',min:100000,max:Infinity,price:15000}
+];
+
+let U={pts:0,games:0,best:0,streak:0,lastDay:null,prem:false,rank:'bronze',buyLife:0,buyTime:0,refCnt:0,refPts:0,refBonus:0,sound:false,vib:true,dark:true,daily:{date:null,games:0,refs:0,shop:0,claimed:false}};
+let G={score:0,correct:0,lives:3,maxLives:3,time:60,maxTime:60,playing:false,streak:0,bestStreak:0,answer:0,opts:[],diff:'easy',canAns:true};
+let timer=null;
+
+function load(){
+    const s=localStorage.getItem('vx5');
+    if(s)U={...U,...JSON.parse(s)};
+    
+    // URL dan bot ma'lumotlarini olish
+    const urlParams = new URLSearchParams(window.location.search);
+    const startParam = urlParams.get('start_param');
+    if(startParam){
+        try{
+            // Format: pts_rank_prem (masalan: 150_bronze_0)
+            const parts = startParam.split('_');
+            if(parts.length >= 3){
+                const botPts = parseInt(parts[0]) || 0;
+                const botRank = parts[1] || 'bronze';
+                const botPrem = parts[2] === '1';
+                
+                // Eng katta ballni olish
+                if(botPts > U.pts){
+                    U.pts = botPts;
+                    U.rank = botRank;
+                    U.prem = botPrem || U.prem;
+                    localStorage.setItem('vx5',JSON.stringify(U));
+                }
+            }
+        }catch(e){}
+    }
+}
+function save(){
+    localStorage.setItem('vx5',JSON.stringify(U));
+}
+function fmt(n){return n.toLocaleString('uz-UZ')}
+function fmtPrice(n){return fmt(n)+" so'm"}
+
+function checkDaily(){const t=new Date().toDateString();if(U.daily.date!==t){U.daily={date:t,games:0,refs:0,shop:0,claimed:false};save()}}
+
+function updateUI(){
+    checkDaily();
+    document.getElementById('hStreak').textContent=U.streak;
+    document.getElementById('hPts').textContent=fmt(U.pts);
+    
+    const r=RANKS.find(x=>x.id===U.rank)||RANKS[0],next=RANKS[RANKS.indexOf(r)+1];
+    document.getElementById('rIcon').textContent=r.icon;
+    document.getElementById('rName').textContent=r.name;
+    if(next){const p=Math.min(100,(U.pts-r.min)/(next.min-r.min)*100);document.getElementById('rPts').textContent=fmt(U.pts)+' / '+fmt(next.min);document.getElementById('rFill').style.width=p+'%'}
+    else{document.getElementById('rPts').textContent=fmt(U.pts)+' MAX';document.getElementById('rFill').style.width='100%'}
+    
+    const t1=U.daily.games>=10,t2=U.daily.refs>=3,t3=U.daily.shop>=1;
+    document.getElementById('task1p').textContent=Math.min(U.daily.games,10)+'/10';
+    document.getElementById('task2p').textContent=Math.min(U.daily.refs,3)+'/3';
+    document.getElementById('task3p').textContent=Math.min(U.daily.shop,1)+'/1';
+    document.getElementById('task1c').textContent=t1?'✓':'';
+    document.getElementById('task2c').textContent=t2?'✓':'';
+    document.getElementById('task3c').textContent=t3?'✓':'';
+    document.getElementById('task1').classList.toggle('done',t1);
+    document.getElementById('task2').classList.toggle('done',t2);
+    document.getElementById('task3').classList.toggle('done',t3);
+    
+    const btn=document.getElementById('dailyClaim');
+    if(U.daily.claimed){btn.textContent='✅ Olingan';btn.disabled=true}
+    else if(t1&&t2&&t3){btn.textContent='🎁 500 ball olish';btn.disabled=false}
+    else{btn.textContent='Vazifalarni bajaring';btn.disabled=true}
+    
+    const lL=3-U.buyLife,tL=10-U.buyTime;
+    document.getElementById('lifeLeft').textContent='Qoldi: '+lL;
+    document.getElementById('timeLeft').textContent='Qoldi: '+tL;
+    document.getElementById('shopLife').classList.toggle('disabled',lL<=0||U.pts<100);
+    document.getElementById('shopTime').classList.toggle('disabled',tL<=0||U.pts<100);
+    
+    if(U.prem){const el=document.getElementById('shopPrem');el.querySelector('.shop-name').textContent='Premium ✓';el.querySelector('.shop-price').textContent='Aktiv'}
+    
+    document.getElementById('sStreak').textContent=U.streak+' kun';
+    document.getElementById('sGames').textContent=U.games;
+    document.getElementById('sBest').textContent=fmt(U.best);
+    document.getElementById('refCnt').textContent=U.refCnt;
+    document.getElementById('refPts').textContent=U.refPts+' ⭐';
+    document.getElementById('refBonus').textContent=U.refBonus+' ⭐';
+    document.getElementById('togSound').classList.toggle('on',U.sound);
+    document.getElementById('togVib').classList.toggle('on',U.vib);
+    document.getElementById('togDark').classList.toggle('on',U.dark);
+}
+
+function claimDaily(){if(U.daily.claimed)return;U.daily.claimed=true;U.pts+=500;save();updateUI();vib(100);showPts(500)}
+
+function renderRanks(){
+    const box=document.getElementById('ranksBox');box.innerHTML='';
+    RANKS.forEach(r=>{
+        const owned=r.price===0||U['own_'+r.id],cur=U.rank===r.id;
+        const d=document.createElement('div');
+        d.className='rank-card'+(cur?' current':'')+(owned?' owned':'');
+        const maxT=r.max===Infinity?'∞':fmt(r.max);
+        const priceT=r.price===0?'Bepul':owned?'✓':fmtPrice(r.price);
+        d.innerHTML=`<div class="rank-card-icon">${r.icon}</div><div class="rank-card-info"><div class="rank-card-name">${r.name}</div><div class="rank-card-range">${fmt(r.min)} - ${maxT}</div></div><div class="rank-card-price" style="color:${owned?'var(--green)':'var(--text2)'}">${priceT}</div>`;
+        if(!owned&&r.price>0)d.onclick=()=>buyRank(r);
+        box.appendChild(d);
+    });
+}
+
+function showPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));document.getElementById(p+'Page').classList.add('active');document.querySelectorAll('.nav-item')[p==='game'?0:p==='shop'?1:2].classList.add('active')}
+function vib(ms){if(U.vib&&navigator.vibrate)navigator.vibrate(ms)}
+
+function startGame(){
+    G.maxLives=U.prem?5:3;G.maxLives+=U.buyLife;G.maxTime=U.prem?70:60;G.maxTime+=U.buyTime*2;
+    G={...G,score:0,correct:0,lives:G.maxLives,time:G.maxTime,playing:true,streak:0,bestStreak:0,diff:'easy',canAns:true};
+    U.buyLife=0;U.buyTime=0;save();updateUI();
+    document.getElementById('preGame').style.display='none';document.getElementById('endGame').style.display='none';document.getElementById('inGame').style.display='block';
+    renderLives();genQuestion();updateGameUI();startTimer();
+}
+
+function renderLives(){const el=document.getElementById('lives');el.innerHTML='';for(let i=0;i<G.maxLives;i++){const h=document.createElement('span');h.className='heart'+(i>=G.lives?' empty':'');h.textContent='❤️';el.appendChild(h)}}
+
+function genQuestion(){
+    if(G.streak>=12)G.diff='extreme';else if(G.streak>=8)G.diff='hard';else if(G.streak>=4)G.diff='medium';else G.diff='easy';
+    let n1,n2,op,ans;
+    if(G.diff==='easy'){n1=rand(10,30);n2=rand(5,20);op=Math.random()>.5?'+':'-';if(op==='-'&&n1<n2)[n1,n2]=[n2,n1]}
+    else if(G.diff==='medium'){const ops=['+','-','×'];op=ops[rand(0,2)];if(op==='×'){n1=rand(3,12);n2=rand(3,12)}else{n1=rand(20,80);n2=rand(10,40);if(op==='-'&&n1<n2)[n1,n2]=[n2,n1]}}
+    else if(G.diff==='hard'){const ops=['+','-','×','÷'];op=ops[rand(0,3)];if(op==='×'){n1=rand(6,15);n2=rand(4,12)}else if(op==='÷'){n2=rand(3,12);ans=rand(3,15);n1=n2*ans}else{n1=rand(50,150);n2=rand(20,80);if(op==='-'&&n1<n2)[n1,n2]=[n2,n1]}}
+    else{const ops=['×','÷','+','-'];op=ops[rand(0,3)];if(op==='×'){n1=rand(8,20);n2=rand(6,15)}else if(op==='÷'){n2=rand(4,15);ans=rand(5,20);n1=n2*ans}else{n1=rand(100,300);n2=rand(50,150);if(op==='-'&&n1<n2)[n1,n2]=[n2,n1]}}
+    if(!ans){if(op==='+')ans=n1+n2;else if(op==='-')ans=n1-n2;else if(op==='×')ans=n1*n2;else ans=n1/n2}
+    G.answer=ans;
+    const opts=new Set([ans]);while(opts.size<4){const v=Math.max(3,Math.floor(Math.abs(ans)*0.25));let f=Math.random()>.5?ans+rand(1,v):ans-rand(1,v);if(f>0&&f!==ans)opts.add(Math.round(f))}
+    G.opts=[...opts].sort(()=>Math.random()-.5);
+    document.getElementById('quest').textContent=`${n1} ${op} ${n2}`;
+    const dEl=document.getElementById('diffBox');dEl.className='diff '+G.diff;dEl.innerHTML=`<span>${{easy:'OSON',medium:"O'RTA",hard:'QIYIN',extreme:'EKSTREMAL'}[G.diff]}</span>`;
+    const oEl=document.getElementById('opts');oEl.innerHTML='';G.opts.forEach((o,i)=>{const b=document.createElement('button');b.className='opt';b.textContent=o;b.onclick=()=>selectAns(i);oEl.appendChild(b)});G.canAns=true;
+}
+
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+
+function selectAns(i){
+    if(!G.playing||!G.canAns)return;G.canAns=false;
+    const btns=document.querySelectorAll('.opt');
+    if(G.opts[i]===G.answer){
+        vib(50);btns[i].classList.add('correct');G.streak++;G.correct++;if(G.streak>G.bestStreak)G.bestStreak=G.streak;
+        let pts=10;if(G.streak>=5)pts=10+(G.streak-2)*5;else if(G.streak>=4)pts=25;else if(G.streak>=3)pts=20;if(U.prem)pts*=2;G.score+=pts;
+        showPts(pts);updateStreakUI();setTimeout(()=>{genQuestion();updateGameUI()},350);
+    }else{
+        vib([50,30,50]);btns[i].classList.add('wrong');btns.forEach((b,j)=>{if(G.opts[j]===G.answer)b.classList.add('correct')});
+        G.streak=0;G.lives--;updateStreakUI();document.querySelectorAll('.heart')[G.lives]?.classList.add('empty');
+        if(G.lives<=0){setTimeout(endGame,500);return}setTimeout(()=>{renderLives();genQuestion();updateGameUI()},700);
+    }
+}
+
+function showPts(p){const el=document.getElementById('popup');el.textContent='+'+p;el.className='pts-popup show';setTimeout(()=>el.className='pts-popup',800)}
+function updateStreakUI(){document.getElementById('gStreak').textContent=G.streak;let b='';if(G.streak>=5)b='+'+(10+(G.streak-2)*5);else if(G.streak>=4)b='+25';else if(G.streak>=3)b='+20';if(b&&U.prem)b+=' x2';document.getElementById('gBonus').textContent=b}
+function updateGameUI(){document.getElementById('gScore').textContent=G.score;document.getElementById('gCorrect').textContent=G.correct}
+function startTimer(){clearInterval(timer);timer=setInterval(()=>{G.time--;const p=G.time/G.maxTime*100,f=document.getElementById('tFill');f.style.width=p+'%';f.classList.remove('warn','danger');if(p<=20)f.classList.add('danger');else if(p<=40)f.classList.add('warn');const m=Math.floor(G.time/60),s=G.time%60;document.getElementById('tTxt').textContent=m+':'+s.toString().padStart(2,'0');if(G.time<=0)endGame()},1000)}
+
+function endGame(){
+    clearInterval(timer);G.playing=false;
+    const t=new Date().toDateString();if(U.lastDay!==t){const y=new Date();y.setDate(y.getDate()-1);if(U.lastDay===y.toDateString())U.streak++;else U.streak=1;U.lastDay=t}
+    U.pts+=G.score;U.games++;U.daily.games++;if(G.score>U.best)U.best=G.score;autoRank();save();
+    syncToBot();
+    document.getElementById('inGame').style.display='none';document.getElementById('endGame').style.display='block';
+    document.getElementById('fScore').textContent='+'+G.score;document.getElementById('fCorrect').textContent=G.correct;document.getElementById('fStreak').textContent=G.bestStreak;document.getElementById('fTotal').textContent=fmt(U.pts);
+    updateUI();renderRanks();
+}
+
+function syncToBot(){
+    if(tg&&tg.sendData){
+        try{tg.sendData(JSON.stringify({action:'sync_score',pts:U.pts,rank:U.rank,games:U.games,best:U.best}))}catch(e){}
+    }
+}
+
+function autoRank(){for(let i=RANKS.length-1;i>=0;i--){const r=RANKS[i];if(U.pts>=r.min&&(r.price===0||U['own_'+r.id])){U.rank=r.id;break}}}
+
+function buyLife(){if(U.buyLife>=3||U.pts<100)return;U.pts-=100;U.buyLife++;U.daily.shop++;save();updateUI();vib(30)}
+function buyTime(){if(U.buyTime>=10||U.pts<100)return;U.pts-=100;U.buyTime++;U.daily.shop++;save();updateUI();vib(30)}
+function buyPremium(){if(U.prem)return;if(tg){tg.sendData(JSON.stringify({action:'buy_premium',price:7000}));tg.close()}else alert('Telegram orqali oching')}
+function buyRank(r){if(tg){tg.sendData(JSON.stringify({action:'buy_rank',rank:r.id,price:r.price,minPts:r.min}));tg.close()}else alert('Telegram orqali oching')}
+
+function togSound(){U.sound=!U.sound;save();updateUI()}
+function togVib(){U.vib=!U.vib;save();updateUI()}
+function togDark(){U.dark=!U.dark;save();updateUI()}
+function resetAll(){if(confirm("O'chirish?")){localStorage.removeItem('vx5');location.reload()}}
+
+load();updateUI();renderRanks();
+</script>
+</body>
+</html>
