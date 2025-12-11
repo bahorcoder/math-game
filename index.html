@@ -491,11 +491,13 @@ function load(){
     try{
         const hash = window.location.hash;
         if(hash.startsWith('#stats=')){
-            const statsStr = decodeURIComponent(hash.replace('#stats=', ''));
-            const botStats = JSON.parse(statsStr);
-            user = {...user, ...botStats};  
-            localStorage.setItem('mathUser2', JSON.stringify(user));
-            window.location.hash = '';
+            try {
+                const stats = JSON.parse(decodeURIComponent(hash.replace("#stats=", "")));
+                user = {...user, ...stats};
+                save(); 
+            } catch (e) {
+        console.error("Stats parsing error:", e);
+    }
         } else {
             const u = localStorage.getItem('mathUser2');
             if(u) user = {...user, ...JSON.parse(u)};
@@ -603,12 +605,12 @@ function saveProfile(){
     playSound('correct')
         if(tg){
         tg.sendData(JSON.stringify({
-            action: 'update_stats',
+            action: "update_stats",
             totalScore: user.totalScore,
-            isPremium: user.isPremium,
-            rank: user.rank,
-            name: user.name,
-            avatar: user.avatar
+            gamesPlayed: user.gamesPlayed,
+            correct: user.correct,
+            wrong: user.wrong,
+            rank: user.rank
         }));
     }
 }
