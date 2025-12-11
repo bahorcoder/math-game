@@ -403,7 +403,16 @@
                 <div class="setting-item"><div class="setting-info"><div class="setting-icon">🔊</div><div class="setting-text"><div class="title">Ovoz</div><div class="desc">O'yin ovozlari</div></div></div><div class="toggle active" id="soundToggle" onclick="toggleSetting('sound')"></div></div>
                 <div class="setting-item"><div class="setting-info"><div class="setting-icon">📳</div><div class="setting-text"><div class="title">Tebranish</div><div class="desc">Telefon tebranishi</div></div></div><div class="toggle" id="vibrationToggle" onclick="toggleSetting('vibration')"></div></div>
                 <div class="setting-item"><div class="setting-info"><div class="setting-icon">🌙</div><div class="setting-text"><div class="title">Tungi rejim</div><div class="desc">Qorong'u interfeys</div></div></div><div class="toggle active" id="darkToggle" onclick="toggleTheme()"></div></div>
-                <div class="setting-item" onclick="openModal('admin')" style="cursor:pointer"><div class="setting-info"><div class="setting-icon">👑</div><div class="setting-text"><div class="title">Admin Panel</div><div class="desc">To'lov so'rovlarini boshqarish</div></div></div><span style="opacity:0.5">→</span></div>
+                <div class="setting-item" onclick="openModal('admin')" style="cursor:pointer" id="adminItem">
+                    <div class="setting-info">
+                        <div class="setting-icon">👑</div>
+                        <div class="setting-text">
+                            <div class="title">Admin Panel</div>
+                            <div class="desc">To'lov so'rovlarini boshqarish</div>
+                        </div>
+                    </div>
+                    <span style="opacity:0.5">→</span>
+                </div>
             </div>
         </div>
     </div>
@@ -478,11 +487,78 @@ let audioCtx=null;
 function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx}
 function playNote(ctx,freq,vol,delay,duration,type='sine'){const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,ctx.currentTime+delay);gain.gain.setValueAtTime(0,ctx.currentTime+delay);gain.gain.linearRampToValueAtTime(vol,ctx.currentTime+delay+0.01);gain.gain.linearRampToValueAtTime(0,ctx.currentTime+delay+duration);osc.connect(gain);gain.connect(ctx.destination);osc.start(ctx.currentTime+delay);osc.stop(ctx.currentTime+delay+duration+0.1)}
 function playSound(type){if(!settings.sound)return;try{const ctx=initAudio();if(ctx.state==='suspended')ctx.resume();if(type==='correct'){playNote(ctx,523,0.1,0,0.15);playNote(ctx,659,0.1,0.1,0.15);playNote(ctx,784,0.15,0.2,0.2)}else if(type==='wrong'){playNote(ctx,311,0.2,0,0.2,'sawtooth');playNote(ctx,233,0.2,0.1,0.25,'sawtooth')}else if(type==='tick'){playNote(ctx,800,0.05,0,0.05)}else if(type==='levelup'){playNote(ctx,523,0.1,0,0.15);playNote(ctx,659,0.1,0.15,0.15);playNote(ctx,784,0.1,0.3,0.15);playNote(ctx,1047,0.15,0.45,0.3)}else if(type==='click'){playNote(ctx,600,0.08,0,0.08)}else if(type==='gameover'){playNote(ctx,392,0.15,0,0.3,'triangle');playNote(ctx,349,0.15,0.2,0.3,'triangle');playNote(ctx,311,0.2,0.4,0.4,'triangle')}}catch(e){}}
-function load(){try{const u=localStorage.getItem('mathUser2');if(u)user={...user,...JSON.parse(u)};const s=localStorage.getItem('mathSettings2');if(s)settings={...settings,...JSON.parse(s)};const p=localStorage.getItem('paymentRequests2');if(p)paymentRequests=JSON.parse(p)}catch(e){}if(!settings.darkMode){document.body.setAttribute('data-theme','light');document.getElementById('themeBtn').textContent='☀️'}updateUI()}
+function load(){
+    try{
+        const hash = window.location.hash;
+        if(hash.startsWith('#stats=')){
+            const statsStr = decodeURIComponent(hash.replace('#stats=', ''));
+            const botStats = JSON.parse(statsStr);
+            user = {...user, ...botStats};  
+            localStorage.setItem('mathUser2', JSON.stringify(user));
+        } else {
+            const u = localStorage.getItem('mathUser2');
+            if(u) user = {...user, ...JSON.parse(u)};
+        }
+        const s = localStorage.getItem('mathSettings2');
+        if(s) settings = {...settings, ...JSON.parse(s)};
+        const p = localStorage.getItem('paymentRequests2');
+        if(p) paymentRequests = JSON.parse(p);
+    } catch(e){}
+    if(!settings.darkMode){
+        document.body.setAttribute('data-theme','light');
+        document.getElementById('themeBtn').textContent='☀️';
+    }
+    updateUI();
+}
 function save(){try{localStorage.setItem('mathUser2',JSON.stringify(user));localStorage.setItem('mathSettings2',JSON.stringify(settings));localStorage.setItem('paymentRequests2',JSON.stringify(paymentRequests))}catch(e){}}
 function toggleTheme(){settings.darkMode=!settings.darkMode;if(settings.darkMode){document.body.removeAttribute('data-theme');document.getElementById('themeBtn').textContent='🌙'}else{document.body.setAttribute('data-theme','light');document.getElementById('themeBtn').textContent='☀️'}document.getElementById('darkToggle').classList.toggle('active',settings.darkMode);save();playSound('click')}
 function getRankByScore(score){for(let i=RANK_ORDER.length-1;i>=0;i--){if(score>=RANKS[RANK_ORDER[i]].min)return RANK_ORDER[i]}return'bronze'}
-function updateUI(){const r=RANKS[user.rank],ri=RANK_ORDER.indexOf(user.rank);document.getElementById('homeName').innerHTML=user.name+(user.isPremium?' <span class="premium-badge">PREMIUM</span>':'');document.getElementById('homeAvatar').textContent=user.avatar;document.getElementById('homeAvatar').className='profile-avatar '+user.rank;document.getElementById('homeRank').innerHTML=r.icon+' '+r.name.toUpperCase();document.getElementById('homeRank').className='profile-rank '+user.rank;document.getElementById('profileCard').className='profile-card '+user.rank;document.getElementById('premiumBanner').style.display=user.isPremium?'none':'block';document.getElementById('pendingNotice').style.display=user.pendingRequest?'block':'none';document.getElementById('totalScore').textContent=user.totalScore.toLocaleString();document.getElementById('gamesPlayed').textContent=user.gamesPlayed;const total=user.correct+user.wrong;document.getElementById('accuracy').textContent=total>0?Math.round(user.correct/total*100)+'%':'0%';if(ri<RANK_ORDER.length-1){document.getElementById('rankProgress').style.display='block';const next=RANK_ORDER[ri+1],nextR=RANKS[next];const currentMin=r.min,nextMin=nextR.min;const prog=Math.min(100,(user.totalScore-currentMin)/(nextMin-currentMin)*100);document.getElementById('nextRankName').textContent=nextR.name+' gacha';document.getElementById('progressText').textContent=user.totalScore.toLocaleString()+' / '+nextMin.toLocaleString();document.getElementById('progressFill').style.width=prog+'%';document.getElementById('progressFill').className='rank-progress-fill '+next}else{document.getElementById('rankProgress').style.display='none'}document.getElementById('streakDays').textContent=user.streak+' kun';document.getElementById('task1').classList.toggle('done',user.tasks.refs>=3);document.getElementById('task2').classList.toggle('done',user.tasks.games>=10);document.getElementById('task3').classList.toggle('done',user.tasks.bought);document.getElementById('shopBalance').textContent=user.totalScore.toLocaleString()+' ⭐';document.getElementById('totalRefs').textContent=user.referrals.length;document.getElementById('refEarnings').textContent=user.refEarnings;document.getElementById('refBonus').textContent='+'+r.refBonus;document.getElementById('soundToggle').classList.toggle('active',settings.sound);document.getElementById('vibrationToggle').classList.toggle('active',settings.vibration);document.getElementById('darkToggle').classList.toggle('active',settings.darkMode);renderRankUpgrades();renderLeaderboard();renderAdminRequests()}
+function updateUI(){
+    const r=RANKS[user.rank],ri=RANK_ORDER.indexOf(user.rank);
+    document.getElementById('homeName').innerHTML=user.name+(user.isPremium?' <span class="premium-badge">PREMIUM</span>':'');
+    document.getElementById('homeAvatar').textContent=user.avatar;
+    document.getElementById('homeAvatar').className='profile-avatar '+user.rank;
+    document.getElementById('homeRank').innerHTML=r.icon+' '+r.name.toUpperCase();
+    document.getElementById('homeRank').className='profile-rank '+user.rank;
+    document.getElementById('profileCard').className='profile-card '+user.rank;
+    document.getElementById('premiumBanner').style.display=user.isPremium?'none':'block';
+    document.getElementById('pendingNotice').style.display=user.pendingRequest?'block':'none';
+    document.getElementById('totalScore').textContent=user.totalScore.toLocaleString();
+    document.getElementById('gamesPlayed').textContent=user.gamesPlayed;
+    const total=user.correct+user.wrong;
+    document.getElementById('accuracy').textContent=total>0?Math.round(user.correct/total*100)+'%':'0%';
+    if(ri<RANK_ORDER.length-1){
+        document.getElementById('rankProgress').style.display='block';
+        const next=RANK_ORDER[ri+1],nextR=RANKS[next];
+        const currentMin=r.min,nextMin=nextR.min;
+        const prog=Math.min(100,(user.totalScore-currentMin)/(nextMin-currentMin)*100);
+        document.getElementById('nextRankName').textContent=nextR.name+' gacha';
+        document.getElementById('progressText').textContent=user.totalScore.toLocaleString()+' / '+nextMin.toLocaleString();
+        document.getElementById('progressFill').style.width=prog+'%';
+        document.getElementById('progressFill').className='rank-progress-fill '+next;
+    }else{
+        document.getElementById('rankProgress').style.display='none';
+    }
+    document.getElementById('streakDays').textContent=user.streak+' kun';
+    document.getElementById('task1').classList.toggle('done',user.tasks.refs>=3);
+    document.getElementById('task2').classList.toggle('done',user.tasks.games>=10);
+    document.getElementById('task3').classList.toggle('done',user.tasks.bought);
+    document.getElementById('shopBalance').textContent=user.totalScore.toLocaleString()+' ⭐';
+    document.getElementById('totalRefs').textContent=user.referrals.length;
+    document.getElementById('refEarnings').textContent=user.refEarnings;
+    document.getElementById('refBonus').textContent='+'+r.refBonus;
+    document.getElementById('soundToggle').classList.toggle('active',settings.sound);
+    document.getElementById('vibrationToggle').classList.toggle('active',settings.vibration);
+    document.getElementById('darkToggle').classList.toggle('active',settings.darkMode);
+    const adminItem = document.getElementById('adminItem');
+    if (adminItem) {
+        adminItem.style.display = user.isAdmin ? 'flex' : 'none';
+    }
+    renderRankUpgrades();
+    renderLeaderboard();
+    renderAdminRequests();
+}
+
 function renderRankUpgrades(){const c=document.getElementById('rankUpgrades'),ci=RANK_ORDER.indexOf(user.rank);c.innerHTML=RANK_ORDER.filter(r=>r!=='bronze').map(rankKey=>{const rk=RANKS[rankKey];const owned=RANK_ORDER.indexOf(user.rank)>=RANK_ORDER.indexOf(rankKey);return'<div class="rank-upgrade '+(owned?'owned':'')+'" onclick="'+(owned?'':"buyRankDirect('"+rankKey+"')")+'"><div class="left"><div class="rank-icon '+rankKey+'">'+rk.icon+'</div><div class="info"><div class="name">'+rk.name+'</div><div class="benefits">'+rk.mult+'x ball, '+rk.min.toLocaleString()+'-'+rk.max.toLocaleString()+' ball</div></div></div><button class="price-btn">'+(owned?'✓ Bor':rk.priceText)+'</button></div>'}).join('')}
 function renderLeaderboard(){
     document.getElementById('lbMyAvatar').textContent = user.avatar;
@@ -526,7 +602,39 @@ function resetUpload(){document.getElementById('uploadText').textContent='To\'lo
 function copyCard(){navigator.clipboard.writeText('9860080159543810');toast('Karta nusxalandi!','success');playSound('click')}
 function copyRefLink(){navigator.clipboard.writeText(document.getElementById('refLink').value);toast('Havola nusxalandi!','success');playSound('click')}
 function handleUpload(e){if(e.target.files[0]){uploadedFile=e.target.files[0];document.getElementById('uploadText').textContent=uploadedFile.name;document.getElementById('uploadArea').classList.add('has-file');document.getElementById('submitBtn').disabled=false;const reader=new FileReader();reader.onload=function(ev){uploadedFile.base64=ev.target.result};reader.readAsDataURL(uploadedFile);playSound('click')}}
-function submitPayment(){if(!pendingPay||!uploadedFile)return;const request={id:'req_'+Date.now(),type:pendingPay.type,userId:user.id,userName:user.name,userAvatar:user.avatar,userRank:user.rank,amount:document.getElementById('payAmount').textContent,product:document.getElementById('payProduct').textContent,screenshot:uploadedFile.base64,targetRank:pendingPay.to,status:'pending',date:new Date().toISOString()};paymentRequests.push(request);user.pendingRequest=request.id;save();toast("📤 Adminga jo'natildi!",'success');playSound('correct');closeModal('payment');pendingPay=null;uploadedFile=null;updateUI()}
+function submitPayment(){
+    if(!pendingPay || !uploadedFile) return;
+    const request = {
+        id: 'req_' + Date.now(),
+        type: pendingPay.type,
+        userId: user.id,
+        userName: user.name,
+        userAvatar: user.avatar,
+        userRank: user.rank,
+        amount: document.getElementById('payAmount').textContent,
+        product: document.getElementById('payProduct').textContent,
+        screenshot: uploadedFile.base64, 
+        targetRank: pendingPay.to,
+        status: 'pending',
+        date: new Date().toISOString()
+    };
+    paymentRequests.push(request);
+    user.pendingRequest = request.id;
+    save();
+    // Botga yuborish (tg.sendData orqali)
+    if(tg){
+        tg.sendData(JSON.stringify({
+            action: 'submit_payment',
+            payment: request
+        }));
+    }
+    toast("📤 Adminga jo'natildi!", 'success');
+    playSound('correct');
+    closeModal('payment');
+    pendingPay = null;
+    uploadedFile = null;
+    updateUI();
+}
 function startGame(){const baseLives=user.isPremium?5:user.lives;game={score:0,correct:0,wrong:0,streak:0,timeLeft:60+user.extraTime,lives:Math.min(5,baseLives),maxLives:Math.min(5,baseLives),multiplier:(user.isPremium?2:1)*RANKS[user.rank].mult,timer:null,answer:0,playing:true,paused:false};document.getElementById('bottomNav').style.display='none';document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('gameContainer').classList.add('active');document.getElementById('gameAvatar').textContent=user.avatar;document.getElementById('gameAvatar').style.background='var(--'+user.rank+')';document.getElementById('gameName').textContent=user.name;updateGameUI();renderLives();nextQuestion();startTimer();playSound('click')}
 function updateGameUI(){document.getElementById('timerDisplay').textContent=game.paused?'⏸️':game.timeLeft;document.getElementById('gameScore').textContent=Math.round(game.score);document.getElementById('gameStreak').textContent=game.streak;document.getElementById('gameCorrect').textContent=game.correct;const t=document.getElementById('gameTimer');t.classList.remove('warning','critical','paused');if(game.paused)t.classList.add('paused');else if(game.timeLeft<=5)t.classList.add('critical');else if(game.timeLeft<=15)t.classList.add('warning')}
 function renderLives(){let html='';for(let i=0;i<game.maxLives;i++){html+='<span class="life '+(i>=game.lives?'lost':'')+'">❤️</span>'}document.getElementById('livesDisplay').innerHTML=html}
