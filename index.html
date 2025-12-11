@@ -664,7 +664,43 @@ function quitFromPause(){game.paused=false;document.getElementById('pauseOverlay
 function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a}
 function nextQuestion(){const lvl=Math.min(2,Math.floor(game.correct/5));let n1,n2,op,ans;if(lvl===0){n1=rand(1,15);n2=rand(1,15);op=['+','-'][rand(0,1)]}else if(lvl===1){n1=rand(10,50);n2=rand(5,30);op=['+','-','×'][rand(0,2)]}else{n1=rand(20,100);n2=rand(10,50);op=['+','-','×','÷'][rand(0,3)]}if(op==='-'&&n2>n1)[n1,n2]=[n2,n1];if(op==='÷'){const f=rand(2,10);n2=rand(2,12);n1=n2*f}switch(op){case'+':ans=n1+n2;break;case'-':ans=n1-n2;break;case'×':ans=n1*n2;break;case'÷':ans=n1/n2;break}game.answer=Math.round(ans);document.getElementById('questionText').textContent=n1+' '+op+' '+n2+' = ?';const opts=[game.answer];while(opts.length<4){const d=rand(1,Math.max(5,Math.round(Math.abs(game.answer)*0.2)));const o=game.answer+(Math.random()<0.5?d:-d);if(!opts.includes(o)&&o>=0)opts.push(o)}opts.sort(()=>Math.random()-0.5);document.getElementById('answersGrid').innerHTML=opts.map(o=>'<button class="answer-btn" onclick="checkAnswer('+o+',this)">'+o+'</button>').join('')}
 function checkAnswer(sel,btn){if(!game.playing||game.paused)return;const btns=document.querySelectorAll('.answer-btn');btns.forEach(b=>b.disabled=true);if(sel===game.answer){btn.classList.add('correct');playSound('correct');game.correct++;game.streak++;let pts=10*game.multiplier;if(game.streak>=3)pts+=5;if(game.streak>=5)pts+=10;game.score+=Math.round(pts);if(game.streak%3===0)game.timeLeft+=2;updateGameUI();setTimeout(()=>{if(game.playing)nextQuestion()},400)}else{btn.classList.add('wrong');playSound('wrong');if(settings.vibration&&navigator.vibrate)navigator.vibrate(100);game.wrong++;game.streak=0;game.lives--;renderLives();btns.forEach(b=>{if(parseInt(b.textContent)===game.answer)b.classList.add('correct')});if(game.lives<=0)setTimeout(()=>endGame(),800);else setTimeout(()=>{if(game.playing)nextQuestion()},800)}}
-function endGame(){game.playing=false;clearInterval(game.timer);const final=Math.round(game.score);user.totalScore+=final;user.gamesPlayed++;user.correct+=game.correct;user.wrong+=game.wrong;user.tasks.games++;playSound('gameover');const newRank=getRankByScore(user.totalScore);if(RANK_ORDER.indexOf(newRank)>RANK_ORDER.indexOf(user.rank)){user.rank=newRank;setTimeout(()=>{toast('🎉 '+RANKS[user.rank].name+' darajasi!','success');playSound('levelup')},500)}save();document.getElementById('gameContainer').classList.remove('active');document.getElementById('resultContainer').classList.add('active');document.getElementById('resultScore').textContent=final;document.getElementById('resultCorrect').textContent=game.correct;document.getElementById('resultWrong').textContent=game.wrong;const t=game.correct+game.wrong;document.getElementById('resultAccuracy').textContent=t>0?Math.round(game.correct/t*100)+'%':'0%'}
+function endGame() {
+    game.playing = false;
+    clearInterval(game.timer);
+
+    const finalScore = Math.round(game.score);
+
+    user.totalScore += finalScore;
+    user.gamesPlayed = (user.gamesPlayed || 0) + 1;
+    user.correct = (user.correct || 0) + (game.correct || 0);
+    user.wrong = (user.wrong || 0) + (game.wrong || 0);
+
+    if (!user.tasks) user.tasks = { games: 0 };
+    user.tasks.games += 1;
+
+    playSound('gameover');
+
+    const newRank = getRankByScore(user.totalScore);
+    if (RANK_ORDER.indexOf(newRank) > RANK_ORDER.indexOf(user.rank || '')) {
+        user.rank = newRank;
+        setTimeout(() => {
+            toast('🎉 ' + RANKS[user.rank].name + ' darajasi!', 'success');
+            playSound('levelup');
+        }, 500);
+    }
+
+    save();
+
+    document.getElementById('gameContainer').classList.remove('active');
+    document.getElementById('resultContainer').classList.add('active');
+    document.getElementById('resultScore').textContent = finalScore;
+    document.getElementById('resultCorrect').textContent = game.correct || 0;
+    document.getElementById('resultWrong').textContent = game.wrong || 0;
+
+    const totalAnswers = (game.correct || 0) + (game.wrong || 0);
+    document.getElementById('resultAccuracy').textContent =
+        totalAnswers > 0 ? Math.round((game.correct / totalAnswers) * 100) + '%' : '0%';
+}
 function restartGame(){document.getElementById('resultContainer').classList.remove('active');startGame()}
 function backToMenu(){document.getElementById('resultContainer').classList.remove('active');document.getElementById('bottomNav').style.display='flex';document.getElementById('homeScreen').classList.add('active');updateUI()}
 function exitGame(){if(confirm("O'yindan chiqasizmi?")){game.playing=false;clearInterval(game.timer);document.getElementById('gameContainer').classList.remove('active');document.getElementById('bottomNav').style.display='flex';document.getElementById('homeScreen').classList.add('active')}}
