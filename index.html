@@ -495,6 +495,7 @@ function load(){
             const botStats = JSON.parse(statsStr);
             user = {...user, ...botStats};  
             localStorage.setItem('mathUser2', JSON.stringify(user));
+            window.location.hash = '';
         } else {
             const u = localStorage.getItem('mathUser2');
             if(u) user = {...user, ...JSON.parse(u)};
@@ -593,7 +594,24 @@ function openModal(name){if(name==='profile'){selAvatar=user.avatar;document.get
 function closeModal(name){document.getElementById(name+'Modal').classList.remove('show')}
 function renderAvatarGrids(){document.getElementById('avatarGrid').innerHTML=AVATARS.map(a=>'<div class="avatar-opt '+(a===selAvatar?'selected':'')+'" onclick="selectAvatar(\''+a+'\')">'+a+'</div>').join('');document.getElementById('premiumAvatarGrid').innerHTML=PREMIUM_AVATARS.map(a=>{const locked=!user.isPremium;return'<div class="avatar-opt premium-avatar '+(a===selAvatar?'selected':'')+' '+(locked?'locked':'')+'" onclick="'+(locked?'toast(\'Premium obuna kerak!\',\'error\')':'selectAvatar(\''+a+'\')')+'">'+a+'</div>'}).join('')}
 function selectAvatar(a){selAvatar=a;renderAvatarGrids();playSound('click')}
-function saveProfile(){user.name=document.getElementById('nameInput').value.trim()||"O'yinchi";user.avatar=selAvatar;save();updateUI();closeModal('profile');toast('Profil saqlandi!','success');playSound('correct')}
+function saveProfile(){
+    user.name=document.getElementById('nameInput').value.trim()||"O'yinchi";
+    user.avatar=selAvatar;
+    save();updateUI();
+    closeModal('profile');
+    toast('Profil saqlandi!','success');
+    playSound('correct')
+        if(tg){
+        tg.sendData(JSON.stringify({
+            action: 'update_stats',
+            totalScore: user.totalScore,
+            isPremium: user.isPremium,
+            rank: user.rank,
+            name: user.name,
+            avatar: user.avatar
+        }));
+    }
+}
 function toggleSetting(key){settings[key]=!settings[key];document.getElementById(key+'Toggle').classList.toggle('active',settings[key]);save();playSound('click')}
 function buyItem(type,price){if(user.totalScore<price){toast('Ball yetarli emas!','error');playSound('wrong');return}user.totalScore-=price;user.tasks.bought=true;if(type==='life'){user.lives=Math.min(5,user.lives+1);toast('+1 jon!','success')}else if(type==='time5'){user.extraTime+=5;toast('+5 sek!','success')}playSound('correct');save();updateUI()}
 function buyRankDirect(rankKey){if(user.pendingRequest){toast('Sizda kutilayotgan so\'rov bor!','error');return}const rk=RANKS[rankKey];pendingPay={type:'rank',to:rankKey,price:rk.price};document.getElementById('payAmount').textContent=rk.priceText;document.getElementById('payProduct').textContent=rk.name+' darajasi';resetUpload();openModal('payment')}
